@@ -1,10 +1,15 @@
 from . import routers_
+from dataSturct import Time
 from fastapi import Form, UploadFile, File, HTTPException
-from func_set.time_check import sys_time_check
+from func_set.time_check import generate_deadline, check_time
 from response import stu_form_reponses
 from database_op.sqlite3_op import database, metadata, creat_table, engine
 from pathlib import Path
 import aiofiles
+
+
+deadline = ...
+FileFliter = ('jpg', 'JPG', 'png', 'PNG')
 
 
 @routers_.on_event("startup")
@@ -21,7 +26,7 @@ async def database_realse():
     await database.disconnect()
 
 
-@routers_.post('/stuMsg_picUpload', tags=['上传表单'],
+@routers_.post('/stu_msg_upload', tags=['上传表单'],
                responses={**stu_form_reponses})
 async def get_stu_data(stu_name: str = Form(...,
                                             regex=r'^[^\x00-\xff]+$',
@@ -36,22 +41,27 @@ async def get_stu_data(stu_name: str = Form(...,
     - **stu_id**: 学生的学号表单
     - **pic**: 图片文件
     """
-    if _ := await sys_time_check(defalut_time=20):
+    if check_time(deadline):
         raise HTTPException(status_code=403, detail="拒绝访问")
-
-    context = await pic.read()
+    if pic.filename.split('.')[-1] not in FileFliter:
+        raise HTTPException(status_code=403, detail="非图片类型")
     file_path = Path(__file__).parent.parent / Path('data_file')
     async with aiofiles.open(f'{str(file_path)}/{pic.filename}', 'wb') as f:
-        await f.write(context)
+        await f.write(await pic.read())
     return {"stu_name": stu_name,
             "stu_id": stu_id}
 
 
-@routers_.post('start_signIn')
-async def start(token: str = Form(...)):
+@routers_.post('/start_signIn', tags=["管理员api"])
+async def start(time: Time):
     """
     管理员开启签到接口
-    - **token**: 验证码
+    - **seconds**: 持续秒数
+    - **minutes**: 持续分钟数
+    - **hours**: 持续小时数
     """
-    ...
-
+    global deadline
+    deadline = generate_deadline(seconds=time.seconds,
+                                 minutes=time.minutes,
+                                 hours=time.hours)
+    return 200
