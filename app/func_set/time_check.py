@@ -1,9 +1,37 @@
+from functools import wraps
+from fastapi import HTTPException
+import asyncio
 import datetime
+
+
+# 谨慎使用！！！！
+def check_time_decorator(deadline: datetime.datetime):
+    """
+    检查时间的修饰器，使用bug未知，谨慎使用
+
+    >>> @check_time_decorator(deadline)
+    >>> def func():
+    >>>     pass
+    :param deadline: datetime.datetime
+    :return: inner_func
+    """
+    def innner_func(async_func):
+        @wraps(async_func)
+        def wraper(*args, **kwargs):
+            if datetime.datetime.now() >= \
+                    (deadline if isinstance(deadline, datetime.datetime) else datetime.datetime.now()):
+                return asyncio.run(async_func(*args, **kwargs))
+            raise HTTPException(status_code=403, detail="超时！拒绝访问")
+
+        return wraper
+
+    return innner_func
 
 
 def check_time(deadline: datetime.datetime) -> bool:
     """
     检查当前时间是否过期
+
     :param deadline: datetime.datetime
     :return: bool
     """

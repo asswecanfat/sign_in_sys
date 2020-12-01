@@ -1,12 +1,11 @@
 from . import routers_
 from dataSturct import Time
-from fastapi import Form, UploadFile, File, HTTPException
-from func_set.time_check import generate_deadline, check_time
+from fastapi import Form, UploadFile, File, requests, HTTPException
+from func_set.time_check import generate_deadline, check_time_decorator
 from response import stu_form_reponses
 from database_op.sqlite3_op import database, metadata, creat_table, engine
 from pathlib import Path
 import aiofiles
-
 
 deadline = ...
 FileFliter = ('jpg', 'JPG', 'png', 'PNG')
@@ -28,7 +27,9 @@ async def database_realse():
 
 @routers_.post('/stu_msg_upload', tags=['上传表单'],
                responses={**stu_form_reponses})
-async def get_stu_data(stu_name: str = Form(...,
+@check_time_decorator(deadline=deadline)
+async def get_stu_data(request: requests.Request,
+                       stu_name: str = Form(...,
                                             regex=r'^[^\x00-\xff]+$',
                                             description='学生姓名'),
                        stu_id: str = Form(...,
@@ -37,12 +38,14 @@ async def get_stu_data(stu_name: str = Form(...,
                        pic: UploadFile = File(..., description='注意！是图片类型')):
     """
     发送学生的学号姓名表单, 且上传的文件是图片类型！！！
+
     - **stu_name**: 学生的姓名表单
     - **stu_id**: 学生的学号表单
     - **pic**: 图片文件
     """
-    if check_time(deadline):
-        raise HTTPException(status_code=403, detail="拒绝访问")
+    # print(request.client)
+    # if check_time(deadline):
+    #     raise HTTPException(status_code=403, detail="拒绝访问")
     if pic.filename.split('.')[-1] not in FileFliter:
         raise HTTPException(status_code=403, detail="非图片类型")
     file_path = Path(__file__).parent.parent / Path('data_file')
