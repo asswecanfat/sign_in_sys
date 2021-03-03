@@ -10,7 +10,7 @@ def check_time_decorator(deadline: datetime.datetime):
     检查时间的修饰器，使用bug未知，谨慎使用
 
     >>> @check_time_decorator(deadline)
-    >>> def func():
+    >>> async def func():
     >>>     pass
     :param deadline: datetime.datetime
     :return: inner_func

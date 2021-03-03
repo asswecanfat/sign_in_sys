@@ -17,7 +17,12 @@ class ConfigReader(object):
                  ini_file: Path = Path(__file__).parent.parent / Path('data_file/config.ini')):
         self._parser.read(str(ini_file))
 
-    def get_database_URL(self):
+    def get_database_URL(self) -> str:
+        """
+        获取数据库链接
+
+        :return:database_URL
+        """
         return self._parser.get('databaseURL', 'url')
 
 

@@ -3,32 +3,26 @@ from dataSturct import Time
 from fastapi import Form, UploadFile, File, requests, HTTPException
 from func_set.time_check import generate_deadline, check_time_decorator
 from response import stu_form_reponses
-from database_op.sqlite3_op import database, metadata, creat_table, engine
+from database_op.sqlite3_op import metadata, creat_table, engine
 from pathlib import Path
 import aiofiles
 
 deadline = ...
-FileFliter = ('jpg', 'JPG', 'png', 'PNG')
+FileFliter = ('jpg', 'png')
 
 
 @routers_.on_event("startup")
 async def database_connect():
-    await database.connect()
     data_table = creat_table("test", metadata)
     metadata.create_all(engine, tables=[data_table], checkfirst=True)
     # await database.execute(test.insert().values(id='123', name='asd'))
     # print(await database.fetch_all(data_table.select()))
 
 
-@routers_.on_event("shutdown")
-async def database_realse():
-    await database.disconnect()
-
-
-@routers_.post('/stu_msg_upload', tags=['上传表单'],
+@routers_.post('/stu_msg_upload', tags=['学生'],
                responses={**stu_form_reponses})
 @check_time_decorator(deadline=deadline)
-async def get_stu_data(request: requests.Request,
+async def get_stu_data(frequest: requests.Request,
                        stu_name: str = Form(...,
                                             regex=r'^[^\x00-\xff]+$',
                                             description='学生姓名'),
@@ -46,7 +40,7 @@ async def get_stu_data(request: requests.Request,
     # print(request.client)
     # if check_time(deadline):
     #     raise HTTPException(status_code=403, detail="拒绝访问")
-    if pic.filename.split('.')[-1] not in FileFliter:
+    if pic.filename.split('.')[-1].lower() != FileFliter:
         raise HTTPException(status_code=403, detail="非图片类型")
     file_path = Path(__file__).parent.parent / Path('data_file')
     async with aiofiles.open(f'{str(file_path)}/{pic.filename}', 'wb') as f:
@@ -55,8 +49,10 @@ async def get_stu_data(request: requests.Request,
             "stu_id": stu_id}
 
 
-@routers_.post('/start_signIn', tags=["管理员api"])
-async def start(time: Time):
+@routers_.post('/start_signIn', tags=["教师"])
+async def start(time: Time,
+                course: str = Form(...,
+                                   description="课程名")):
     """
     管理员开启签到接口
     - **seconds**: 持续秒数
@@ -67,4 +63,15 @@ async def start(time: Time):
     deadline = generate_deadline(seconds=time.seconds,
                                  minutes=time.minutes,
                                  hours=time.hours)
-    return 200
+    return {'statue': 200}
+
+
+@routers_.post('/stop_signIn', tags=["教师"])
+async def stop():
+    return ...
+
+
+@routers_.post('/thing_add', tags=["教师"])
+async def add_routin():
+    return ...
+
