@@ -15,6 +15,7 @@ def check_time_decorator(deadline: datetime.datetime):
     :param deadline: datetime.datetime
     :return: inner_func
     """
+
     def innner_func(async_func):
         @wraps(async_func)
         def wraper(*args, **kwargs):
@@ -30,7 +31,7 @@ def check_time_decorator(deadline: datetime.datetime):
 
 def check_time(deadline: datetime.datetime) -> bool:
     """
-    检查当前时间是否过期
+    检查当前时间是否过期（可用于fastapi的依赖）
 
     :param deadline: datetime.datetime
     :return: bool
@@ -39,22 +40,20 @@ def check_time(deadline: datetime.datetime) -> bool:
 
 
 # 生成检验时间
-def generate_deadline(**kwargs) -> datetime.datetime:
+def generate_deadline(seconds: float = 0,
+                      minutes: float = 0,
+                      hours: float = 0) -> datetime.datetime:
     """
     生成终止时间
 
-    :param kwargs: seconds = float, minutes = float, hours = float)
+    :param hours:
+    :param minutes:
+    :param seconds:
     :return: datetime.datetime
     """
-
-    def fliter(key: str) -> float:
-        if value := kwargs.get(key):
-            return value
-        return 0
-
-    return datetime.datetime.now() + datetime.timedelta(seconds=fliter('seconds'),
-                                                        minutes=fliter('minutes'),
-                                                        hours=fliter('hours'))
+    return datetime.datetime.now() + datetime.timedelta(seconds=seconds,
+                                                        minutes=minutes,
+                                                        hours=hours)
 
 # if __name__ == '__main__':
 #     @check_time(datetime.datetime.now())
