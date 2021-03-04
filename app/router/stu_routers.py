@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Tuple, AnyStr
+from typing import List, Tuple
 from sqlalchemy import Table
 from datetime import datetime
 
@@ -16,7 +16,7 @@ from . import routers_
 from pprint import pprint
 
 deadline: datetime = ...
-File_Filter: Tuple[str, str] = ('jpg', 'png')
+File_Filter: Tuple[str, str] = ('.jpg', '.png')
 table_cache: List[Table] = ...
 current_alive_table: Table = ...
 base_file_path: Path = Path(__file__).parent.parent / Path('data_file')
@@ -37,9 +37,9 @@ async def get_stu_data(  # request: requests.Request,
         stu_name: str = Form(...,
                              regex=r'^[^\x00-\xff]+$',
                              description='学生姓名'),
-        stu_id: str = Form(...,
-                           regex=r'^\d{10}$',
-                           description='学生学号'),
+        # stu_id: str = Form(...,
+        #                    regex=r'^\d{10}$',
+        #                    description='学生学号'),
         pic: UploadFile = File(..., description='注意！是图片类型'),
         session: Session = Depends(get_session)):
     """
@@ -52,12 +52,16 @@ async def get_stu_data(  # request: requests.Request,
     # print(request.headers)
     # if check_time(deadline):
     #     raise HTTPException(status_code=403, detail="拒绝访问")
-    if pic.filename.split('.')[-1].lower() != File_Filter:
+    print(Path(pic.filename).suffix.lower())
+    if Path(pic.filename).suffix.lower() not in File_Filter:
         raise HTTPException(status_code=403, detail="非图片类型")
-    async with aiofiles.open(f'{str(current_alive_file_path)}/{pic.filename}', 'wb') as f:
+    async with aiofiles.open(f'{str(current_alive_file_path)}/{stu_name}.jpg',
+                             'wb') as f:
         await f.write(await pic.read())
-    return {"stu_name": stu_name,
-            "stu_id": stu_id}
+    session.execute(current_alive_table.insert(), {'name': stu_name,
+                                                   'pic_url': 'test_url'})
+    session.commit()
+    return {"status": 200}
 
 
 @routers_.post('/start_signIn', tags=["教师"])
@@ -95,4 +99,5 @@ async def stop_routine():
     # for table in table_cache:
     #     if table_name == table.name:
     #         return session.query(table).all()
+
     return {'status': 203}

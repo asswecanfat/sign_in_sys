@@ -36,12 +36,12 @@ def creat_stu_table(table_name: str) -> Table:
 
 def creat_course_table(course: str) -> Table:
     """
-    创建课程数据库表（此时未加入数据库,名称以包含名称）
+    创建课程数据库表（此时未加入数据库,名称以包含时间）
 
     :param course: 课程名称
     :return: orm
     """
-    return Table(f'{str(datetime.now())}{course}',
+    return Table(f'{str(datetime.now())}-{course}',
                  metadata,
                  Column("id",
                         INTEGER,
