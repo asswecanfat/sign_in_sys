@@ -1,11 +1,13 @@
 # import databases
-from sqlalchemy import create_engine, MetaData, Table, Column, String
+from sqlalchemy import create_engine, MetaData, Table, Column, String, INTEGER
 from func_set.config_read import ConfigReader
 from sqlalchemy.orm import sessionmaker
 from typing import List
+from datetime import datetime
 
 
-DATABASE_URL = ConfigReader().get_database_URL()  # 'sqlite:///../data_file/test.db'
+# 'sqlite:///../data_file/test.db'
+DATABASE_URL = ConfigReader().get_database_URL()
 
 engine = create_engine(
     DATABASE_URL, connect_args={"check_same_thread": False},
@@ -19,9 +21,9 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 metadata = MetaData()
 
 
-def creat_table(table_name: str) -> Table:
+def creat_stu_table(table_name: str) -> Table:
     """
-    创建数据库表（此时未加入数据库）
+    创建学生信息数据库表（此时未加入数据库）
 
     :param table_name: 表名
     :return: orm
@@ -30,6 +32,25 @@ def creat_table(table_name: str) -> Table:
                  metadata,
                  Column("id", String(20), primary_key=True, unique=True),
                  Column("name", String(20)), )
+
+
+def creat_course_table(course: str) -> Table:
+    """
+    创建课程数据库表（此时未加入数据库,名称以包含名称）
+
+    :param course: 课程名称
+    :return: orm
+    """
+    return Table(f'{str(datetime.now())}{course}',
+                 metadata,
+                 Column("id",
+                        INTEGER,
+                        primary_key=True,
+                        unique=True,
+                        autoincrement=True),
+                 Column("name", String(20)),
+                 Column("pic_url", String(20))
+                 )
 
 
 def excle_exec(): ...
@@ -53,7 +74,12 @@ def table_get_inList() -> List[Table]:
     """
     table_list = []
     for table_name in engine.table_names():
-        table_list.append(Table(table_name, metadata, autoload=True, autoload_with=engine))
+        table_list.append(
+            Table(
+                table_name,
+                metadata,
+                autoload=True,
+                autoload_with=engine))
     return table_list
 
 

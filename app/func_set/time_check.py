@@ -55,10 +55,17 @@ def generate_deadline(seconds: float = 0,
                                                         minutes=minutes,
                                                         hours=hours)
 
+
+def generate_fileTitle_time() -> str:
+    return f'{str(datetime.date.today())}-{datetime.datetime.now().hour}'
+
+
 # if __name__ == '__main__':
 #     @check_time(datetime.datetime.now())
 #     def test(a, b):
-#         return a+b
+#         return a + b
+#
 #
 #     print(test(1, 2))
 #     print(test.__name__)
+#     print(generate_fileTitle_time())
