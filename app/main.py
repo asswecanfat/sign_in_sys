@@ -1,11 +1,12 @@
 from .router.stu_routers import routers_
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
 
 app.include_router(routers_)
+app.mount('/static', StaticFiles(directory='app\data_file'))
 
 origins = [
     "http://localhost.tiangolo.com",

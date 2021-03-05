@@ -45,8 +45,7 @@ async def get_stu_data(  # request: requests.Request,
     """
     发送学生的学号姓名表单, 且上传的文件是图片类型！！！
 
-    - **stu_name**: 学生的姓名表单
-    - **stu_id**: 学生的学号表单
+    - **stu_name**: 学生的姓名
     - **pic**: 图片文件
     """
     # print(request.headers)
@@ -58,8 +57,9 @@ async def get_stu_data(  # request: requests.Request,
     async with aiofiles.open(f'{str(current_alive_file_path)}/{stu_name}.jpg',
                              'wb') as f:
         await f.write(await pic.read())
-    session.execute(current_alive_table.insert(), {'name': stu_name,
-                                                   'pic_url': 'test_url'})
+    session.execute(
+        current_alive_table.insert(), {
+            'name': stu_name, 'pic_url': f'http://127.0.0.1:8000/static/{current_alive_file_path.name}/{stu_name}.jpg'})
     session.commit()
     return {"status": 200}
 
@@ -86,13 +86,17 @@ async def start(time: Time,
                                      minutes=time.minutes,
                                      hours=time.hours)
         build_table_in_DB(current_alive_table)
-        current_alive_file_path = base_file_path / Path(f'{generate_fileTitle_time()}-{course}')
+        current_alive_file_path = base_file_path / \
+            Path(f'{generate_fileTitle_time()}-{course}')
         current_alive_file_path.mkdir()
     return {'statue': 200}
 
 
 @routers_.post('/stop_signIn', tags=["教师"])
 async def stop_routine():
+    """
+    签到停止接口
+    """
     global deadline
     deadline = generate_deadline()  # 默认为现在
     # print(deadline)
