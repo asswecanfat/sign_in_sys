@@ -10,7 +10,7 @@ from sqlalchemy.exc import InvalidRequestError
 
 from dataSturct import Time
 from database_op.sqlite3_op import table_get_inList, get_session, build_table_in_DB, creat_course_table
-from func_set.time_check import generate_deadline, check_time_decorator, generate_fileTitle_time
+from func_set.time_check import generate_deadline, check_time_outline, generate_fileTitle_time
 from response import stu_form_reponses
 from . import routers_
 from pprint import pprint
@@ -32,7 +32,7 @@ async def database_connect():
 
 @routers_.post('/stu_msg_upload', tags=['学生'],
                responses={**stu_form_reponses})
-@check_time_decorator(deadline=deadline)
+# @check_time_decorator(deadline=deadline)
 async def get_stu_data(  # request: requests.Request,
         stu_name: str = Form(...,
                              regex=r'^[^\x00-\xff]+$',
@@ -51,7 +51,9 @@ async def get_stu_data(  # request: requests.Request,
     # print(request.headers)
     # if check_time(deadline):
     #     raise HTTPException(status_code=403, detail="拒绝访问")
-    print(Path(pic.filename).suffix.lower())
+    # print(Path(pic.filename).suffix.lower())
+    if check_time_outline(deadline):
+        raise HTTPException(status_code=403, detail="超时！拒绝访问")
     if Path(pic.filename).suffix.lower() not in File_Filter:
         raise HTTPException(status_code=403, detail="非图片类型")
     async with aiofiles.open(f'{str(current_alive_file_path)}/{stu_name}.jpg',
@@ -87,7 +89,7 @@ async def start(time: Time,
                                      hours=time.hours)
         build_table_in_DB(current_alive_table)
         current_alive_file_path = base_file_path / \
-            Path(f'{generate_fileTitle_time()}-{course}')
+                                  Path(f'{generate_fileTitle_time()}-{course}')
         current_alive_file_path.mkdir()
     return {'statue': 200}
 

@@ -19,9 +19,10 @@ def check_time_decorator(deadline: datetime.datetime):
     def innner_func(async_func):
         @wraps(async_func)
         def wraper(*args, **kwargs):
-            if datetime.datetime.now() >= \
+            if datetime.datetime.now() < \
                     (deadline if isinstance(deadline, datetime.datetime) else datetime.datetime.now()):
                 return asyncio.run(async_func(*args, **kwargs))
+            print(deadline)
             raise HTTPException(status_code=403, detail="超时！拒绝访问")
 
         return wraper
@@ -29,7 +30,7 @@ def check_time_decorator(deadline: datetime.datetime):
     return innner_func
 
 
-def check_time(deadline: datetime.datetime) -> bool:
+def check_time_outline(deadline: datetime.datetime) -> bool:
     """
     检查当前时间是否过期（可用于fastapi的依赖）
 
