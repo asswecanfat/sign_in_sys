@@ -1,10 +1,9 @@
 # import databases
-from sqlalchemy import create_engine, MetaData, Table, Column, String, INTEGER
+from sqlalchemy import create_engine, MetaData, Table, Column, String, INTEGER, DateTime
 from func_set.config_read import ConfigReader
 from sqlalchemy.orm import sessionmaker
 from typing import List
 from datetime import datetime
-
 
 # 'sqlite:///../data_file/test.db'
 DATABASE_URL = ConfigReader().get_database_URL()
@@ -21,14 +20,13 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 metadata = MetaData()
 
 
-def creat_stu_table(table_name: str) -> Table:
+def creat_stu_table() -> Table:
     """
     创建学生信息数据库表（此时未加入数据库）
 
-    :param table_name: 表名
     :return: orm
     """
-    return Table(table_name,
+    return Table("student",
                  metadata,
                  Column("id", String(20), primary_key=True, unique=True),
                  Column("name", String(20)), )
@@ -41,7 +39,7 @@ def creat_course_table(course: str) -> Table:
     :param course: 课程名称
     :return: orm
     """
-    return Table(f'{str(datetime.now())}-{course}',
+    return Table(f'{str(datetime.now().strftime("%Y-%m-%d %H-%M"))}-{course}',
                  metadata,
                  Column("id",
                         INTEGER,
@@ -49,7 +47,8 @@ def creat_course_table(course: str) -> Table:
                         unique=True,
                         autoincrement=True),
                  Column("name", String(20)),
-                 Column("pic_url", String(20))
+                 Column("pic_url", String(20)),
+                 Column("signIn_time", DateTime, default=datetime.now)
                  )
 
 

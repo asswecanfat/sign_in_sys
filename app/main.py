@@ -6,13 +6,13 @@ from fastapi.staticfiles import StaticFiles
 app = FastAPI()
 
 app.include_router(routers_)
-app.mount('/static', StaticFiles(directory='app\data_file'))
+app.mount('/static', StaticFiles(directory=r'app\data_file'))
 
 origins = [
     "http://localhost.tiangolo.com",
     "https://localhost.tiangolo.com",
-    "http://127.0.0.1:5500",
-    "http://localhost:5500",
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
     "http://localhost",
 ]
 
@@ -20,6 +20,6 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["POST", "GET"],
     allow_headers=["*"],
 )

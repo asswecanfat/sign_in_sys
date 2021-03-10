@@ -4,7 +4,7 @@ from sqlalchemy import Table
 from datetime import datetime
 
 import aiofiles
-from fastapi import Form, UploadFile, File, requests, HTTPException, Depends, Body
+from fastapi import Form, UploadFile, File, HTTPException, Depends, Body
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import InvalidRequestError
 
@@ -24,10 +24,14 @@ current_alive_file_path: Path = ...
 
 
 @routers_.on_event("startup")
-async def database_connect():
+async def database_connect(session: Session = Depends(get_session)):
     global table_cache
     table_cache = table_get_inList()
     pprint(table_cache)
+    for table in table_cache:
+        if table.name == 'student':
+            session.query()
+            break
 
 
 @routers_.post('/stu_msg_upload', tags=['学生'],
@@ -89,7 +93,7 @@ async def start(time: Time,
                                      hours=time.hours)
         build_table_in_DB(current_alive_table)
         current_alive_file_path = base_file_path / \
-                                  Path(f'{generate_fileTitle_time()}-{course}')
+            Path(f'{generate_fileTitle_time()}-{course}')
         current_alive_file_path.mkdir()
     return {'statue': 200}
 

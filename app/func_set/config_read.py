@@ -25,8 +25,6 @@ class ConfigReader(object):
         """
         return self._parser.get('databaseURL', 'url')
 
-
-
 # if __name__ == '__main__':
 #     c = ConfigReader()
 #     print(c.get_database_URL())
