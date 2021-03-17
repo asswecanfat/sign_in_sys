@@ -1,33 +1,33 @@
-from functools import wraps
-from fastapi import HTTPException
-import asyncio
+# from functools import wraps
+# from fastapi import HTTPException
+# import asyncio
 import datetime
 
 
-# 谨慎使用！！！！
-def check_time_decorator(deadline: datetime.datetime):
-    """
-    检查时间的修饰器，使用bug未知，谨慎使用
-
-    >>> @check_time_decorator(deadline)
-    >>> async def func():
-    >>>     pass
-    :param deadline: datetime.datetime
-    :return: inner_func
-    """
-
-    def innner_func(async_func):
-        @wraps(async_func)
-        def wraper(*args, **kwargs):
-            if datetime.datetime.now() < \
-                    (deadline if isinstance(deadline, datetime.datetime) else datetime.datetime.now()):
-                return asyncio.run(async_func(*args, **kwargs))
-            print(deadline)
-            raise HTTPException(status_code=403, detail="超时！拒绝访问")
-
-        return wraper
-
-    return innner_func
+# # 谨慎使用！！！！
+# def check_time_decorator(deadline: datetime.datetime):
+#     """
+#     检查时间的修饰器，使用bug未知，谨慎使用
+#
+#     >>> @check_time_decorator(deadline)
+#     >>> async def func():
+#     >>>     pass
+#     :param deadline: datetime.datetime
+#     :return: inner_func
+#     """
+#
+#     def innner_func(async_func):
+#         @wraps(async_func)
+#         def wraper(*args, **kwargs):
+#             if datetime.datetime.now() < \
+#                     (deadline if isinstance(deadline, datetime.datetime) else datetime.datetime.now()):
+#                 return asyncio.run(async_func(*args, **kwargs))
+#             print(deadline)
+#             raise HTTPException(status_code=403, detail="超时！拒绝访问")
+#
+#         return wraper
+#
+#     return innner_func
 
 
 def check_time_outline(deadline: datetime.datetime) -> bool:
@@ -58,8 +58,13 @@ def generate_deadline(seconds: float = 0,
 
 
 def generate_fileTitle_time() -> str:
-    return f'{str(datetime.date.today())}-{datetime.datetime.now().hour}'
+    return f'{str(datetime.datetime.now().strftime("%Y-%m-%d-%H-%M"))}'
 
+
+def get_last_time(deadline: datetime.datetime) -> datetime.timedelta:
+    if (last_time := deadline - datetime.datetime.now()) < datetime.timedelta():
+        last_time = datetime.timedelta()
+    return last_time
 
 # if __name__ == '__main__':
 #     @check_time(datetime.datetime.now())

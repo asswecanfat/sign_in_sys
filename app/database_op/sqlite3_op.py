@@ -2,7 +2,7 @@
 from sqlalchemy import create_engine, MetaData, Table, Column, String, INTEGER, DateTime
 from func_set.config_read import ConfigReader
 from sqlalchemy.orm import sessionmaker
-from typing import List
+from typing import List, Generator
 from datetime import datetime
 
 # 'sqlite:///../data_file/test.db'
@@ -55,34 +55,38 @@ def creat_course_table(course: str) -> Table:
 def excle_exec(): ...
 
 
-def build_table_in_DB(table: Table):
+def build_table_in_DB(new_table: Table):
     """
     在数据库中建表
 
-    :param table: 调用creat_table生成的表类
+    :param new_table: 调用creat_table生成的表类
     :return:
     """
-    metadata.create_all(engine, tables=[table], checkfirst=True)
+    metadata.create_all(engine, tables=[new_table], checkfirst=True)
 
 
-def table_get_inList() -> List[Table]:
+def table_get_inList_for_course_stu() -> (List[Table], Table):
     """
     获取数据库中已有表
 
     :return:Table类型的list
     """
     table_list = []
+    stu_table = None
     for table_name in engine.table_names():
-        table_list.append(
-            Table(
-                table_name,
-                metadata,
-                autoload=True,
-                autoload_with=engine))
-    return table_list
+        table = Table(
+            table_name,
+            metadata,
+            autoload=True,
+            autoload_with=engine)
+        if table_name != 'student':
+            table_list.append(table)
+        else:
+            stu_table = table
+    return table_list, stu_table
 
 
-def get_session():  # fastapi的依赖
+def get_session() -> Generator:  # fastapi的依赖
     """
     fastapi的依赖
 
@@ -97,4 +101,5 @@ def get_session():  # fastapi的依赖
 
 if __name__ == '__main__':
     # metadata.create_all(engine, tables=[creat_table('test2', metadata)], checkfirst=True)
-    table_get_inList()
+    f_table = creat_stu_table()
+    build_table_in_DB(f_table)
