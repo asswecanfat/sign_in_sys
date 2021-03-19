@@ -22,6 +22,7 @@ current_alive_table: Table = ...
 base_file_path: Path = Path(__file__).parent.parent / Path('data_file')
 current_alive_file_path: Path = ...
 stu_data: Dict = ...
+sign_cache: List = []
 
 
 @routers_.on_event("startup")
@@ -38,7 +39,7 @@ async def database_connect():
 @routers_.get('/get_time', tags=['学生'])
 async def get_time():
     sec = get_last_time(deadline) if isinstance(deadline, datetime) else timedelta()
-    return {"second": sec}
+    return {"status_code": 200, "second": sec}
 
 
 @routers_.post('/stu_msg_upload', tags=['学生'],
@@ -52,6 +53,7 @@ async def get_stu_data(  # request: requests.Request,
                            regex=r'^\d{10}$',
                            description='学生学号'),
         pic: UploadFile = File(..., description='注意！是图片类型'),
+        face: UploadFile = File(..., description='需要验证的图片'),
         session: Session = Depends(get_session)):
     """
     发送学生的学号姓名表单, 且上传的文件是图片类型！！！
@@ -63,11 +65,14 @@ async def get_stu_data(  # request: requests.Request,
     # if check_time(deadline):
     #     raise HTTPException(status_code=403, detail="拒绝访问")
     # print(Path(pic.filename).suffix.lower())
+    global sign_cache
     if check_time_outline(deadline):
         raise HTTPException(status_code=404, detail="超时！拒绝访问")
+    if stu_name in sign_cache:
+        raise HTTPException(status_code=400, detail="已签到！")
     if stu_id not in stu_data:
         raise HTTPException(status_code=401, detail="学号不存在！")
-    if not stu_data.get(stu_id, default='') == stu_name:
+    if stu_data[stu_id] != stu_name:
         raise HTTPException(status_code=402, detail="学生姓名错误！")
     if Path(pic.filename).suffix.lower() not in File_Filter:
         raise HTTPException(status_code=403, detail="非图片类型")
@@ -78,7 +83,8 @@ async def get_stu_data(  # request: requests.Request,
         current_alive_table.insert(), {
             'name': stu_name, 'pic_url': f'http://127.0.0.1:8000/static/{current_alive_file_path.name}/{stu_name}.jpg'})
     session.commit()
-    return {"status": 200}
+    sign_cache.append(stu_id)
+    return {"status_code": 200, "detail": "签到成功！"}
 
 
 @routers_.post('/start_signIn', tags=["教师"])
@@ -126,9 +132,9 @@ async def stop_routine():
 
 @routers_.post('/face', tags=["学生"])
 async def face_recognize():
-    return '200'
+    return {'status': 200}
 
 
 @routers_.get('/excel_get', tags=["教师"])
 async def creat_excel():
-    return '200'
+    return {'status': 200}
