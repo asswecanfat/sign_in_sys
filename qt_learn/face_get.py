@@ -17,8 +17,8 @@ class Face_Get(QMainWindow, DesktopUI):
             cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
         self.setupUi(self)
         self.label.setText('摄像头载入中。。。')
-        # self.__set_camera()
-        self.pushButton.clicked.connect(self.network)
+        self.__set_camera()
+        self.pushButton.clicked.connect(self.catch_pic)
         self.frame = None
         self.num = 0
         self.file_path = Path(__file__).parent / Path('face')

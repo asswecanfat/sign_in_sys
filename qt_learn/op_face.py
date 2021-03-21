@@ -15,7 +15,8 @@ def img2vector(image):
     :return:一维向量
     """
     print(image)
-    img = cv2.resize(cv2.imread(image, 0), (100, 100), )  # 读取图片并重设大小
+    img = cv2.imread(image, 0)
+    img = cv2.resize(img, (100, 100), )  # 读取图片并重设大小
     rows, cols = img.shape  # 获取图片的像素
     # img_vector = np.zeros((1, rows * cols))  # 初始值均设置为0，大小就是图片像素的大小
     img_vector = np.reshape(img, (1, rows * cols))  # 使用imgVector变量作为一个向量存储图片矢量化信息
@@ -33,12 +34,15 @@ def load_img(img_num: int, people_num: int):
     face = np.zeros((people_num * img_num, 100 * 100))
     label = np.zeros(people_num * img_num)  # [0,0,.....0](共40*k个0)
     sample = np.random.permutation(img_num) + 1  # 随机排序1-10 (0-9）+1
+    print(sample)
     for num, i in enumerate(file_path):  # 共有people_num个人
         for j in range(img_num):  # 每个人都有10张照片
-            image = str(i / Path(f'{sample[j]}.jpg'))
+            print(j)
+            image = i / Path(f'{sample[j]}.jpg')
             # 读取图片并进行矢量化,构成训练集
-            face[num * img_num + j, :] = img2vector(image)
+            face[num * img_num + j, :] = img2vector(str(image))
             label[num * img_num + j] = num + 1
+    print(face.shape)
     return face, label
 
 
@@ -58,33 +62,10 @@ def pca(face_data, vector_num: int):  # 参数r代表降低到r维
     characteristic_value, characteristic_vector = np.linalg.eig(covariance_matrix)  # 求协方差矩阵的特征值和特征向量
     r_num_vector = d_value.T * characteristic_vector[:, 0:vector_num]  # 按列取前r个特征向量,小矩阵特征向量向大矩阵特征向量过渡
     for i in range(vector_num):
+        print(r_num_vector.shape)
         r_num_vector[:, i] = r_num_vector[:, i] / np.linalg.norm(r_num_vector[:, i])  # 特征向量归一化
     final_face_data = d_value * r_num_vector
     return final_face_data, face_mean, r_num_vector
-
-
-# def face_recongize_old(image) -> str:
-#     train_face, train_label = load_img(5, 3)
-#     test_face = np.zeros((1, 100 * 100))
-#     img = cv2.resize(image, (100, 100), )
-#     rows, cols = img.shape  # 获取图片的像素
-#     test_face[0, :] = np.reshape(img, (1, rows * cols))
-#     # 将图片降维到10维
-#     data_train_new, data_mean, V_r = pca(train_face, 10)
-#     num_train = data_train_new.shape[0]  # 训练脸总数
-#     num_test = test_face.shape[0]  # 测试脸总数
-#     temp_face = test_face - np.tile(data_mean, (num_test, 1))
-#     data_test_new = np.array(temp_face * V_r)  # 得到测试脸在特征向量下的数据,mat change to array
-#     data_train_new = np.array(data_train_new)
-#
-#     for i in range(num_test):
-#         test_f = data_test_new[i, :]
-#         diff_mat = data_train_new - np.tile(test_f, (num_train, 1))  # 训练数据与测试脸之间距离
-#         sq_diff_mat = diff_mat ** 2
-#         sq_distances = sq_diff_mat.sum(axis=1)  # 按行求和
-#         sorted_dist_indicies = sq_distances.argsort()  # 对向量从小到大排序，使用的是索引值,得到一个向量
-#         index_min = sorted_dist_indicies[0]  # 距离最近的索引
-#         return str(train_label[index_min]) if index_min < REAL_DISTANCE else 'Unknown'
 
 
 def face_recongize_knn(image) -> str:
@@ -125,8 +106,8 @@ def camera_face():
             pre = face_recongize_knn(gray[y:y + h, x:x + w])
             cv2.putText(frame, pre, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (55, 255, 155), 2)
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 1)
-        except IndexError:
-            pass
+        except IndexError as e:
+            print(e)
         finally:
             cv2.imshow('face_capture', frame)
         if cv2.waitKey(100) & 0xff == ord('q'):
@@ -156,7 +137,8 @@ def knn_com(data, label, input_data) -> str:
 
 
 if __name__ == '__main__':
-    # face_recongize(r'1/7.jpg')
+    # # face_recongize(r'1/7.jpg')
     camera_face()
     # img2vector(r'1/7.jpg')
-    # img = cv2.imread('1/8.jpg', 0)  # 读取图片
+    # img = cv2.resize(cv2.imread('1/7.jpg', 0), (100, 100), )
+      # 读取图片
