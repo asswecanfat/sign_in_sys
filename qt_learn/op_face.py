@@ -34,15 +34,12 @@ def load_img(img_num: int, people_num: int):
     face = np.zeros((people_num * img_num, 100 * 100))
     label = np.zeros(people_num * img_num)  # [0,0,.....0](共40*k个0)
     sample = np.random.permutation(img_num) + 1  # 随机排序1-10 (0-9）+1
-    print(sample)
     for num, i in enumerate(file_path):  # 共有people_num个人
         for j in range(img_num):  # 每个人都有10张照片
-            print(j)
             image = i / Path(f'{sample[j]}.jpg')
             # 读取图片并进行矢量化,构成训练集
             face[num * img_num + j, :] = img2vector(str(image))
-            label[num * img_num + j] = num + 1
-    print(face.shape)
+            label[num * img_num + j] = i.name
     return face, label
 
 
@@ -75,7 +72,7 @@ def face_recongize_knn(image) -> str:
     :param image:面部帧
     :return: 预测值
     """
-    train_face, train_label = load_img(10, 1)
+    train_face, train_label = load_img(10, 4)
     test_face = np.zeros((1, 100 * 100))
     img = cv2.resize(image, (100, 100), )
     rows, cols = img.shape  # 获取图片的像素
@@ -127,7 +124,7 @@ def knn_com(data, label, input_data) -> str:
     """
     np.random.seed(0)
     knn = KNeighborsClassifier()  # 定义一个knn分类器对象
-    knn.fit(data, label)  # 调用该对象的训练方法，主要接收两个参数：训练数据集及其样本标签
+    knn.fit(data, label.astype('int'))  # 调用该对象的训练方法，主要接收两个参数：训练数据集及其样本标签
     label_predict = knn.predict(input_data)
     print(knn.predict_proba(input_data))
     # probility = knn.predict_proba(test_data)

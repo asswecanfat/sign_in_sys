@@ -96,7 +96,7 @@ def start_train():
 
     knn = get_KNN(people_num=4, face=data_train_new, label=train_label)
     model_test(knn, data_test_new)
-    joblib.dump(knn, '../data_file/stu_face.model')
+    joblib.dump((knn, data_mean, r_num_vector), '../data_file/stu_face.model')
 
 
 def model_test(model: KNeighborsClassifier, data_test: np.ndarray):

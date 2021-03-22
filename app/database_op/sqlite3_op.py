@@ -1,10 +1,10 @@
-# import databases
-from sqlalchemy import create_engine, MetaData, Table, Column, String, INTEGER, DateTime
-from func_set.config_read import ConfigReader
-from sqlalchemy.orm import sessionmaker
 from typing import List, Generator
 from datetime import datetime
 
+from sqlalchemy import create_engine, MetaData, Table, Column, String, INTEGER, DateTime
+from sqlalchemy.orm import sessionmaker
+
+from func_set.config_read import ConfigReader
 # 'sqlite:///../data_file/test.db'
 DATABASE_URL = ConfigReader().get_database_URL()
 

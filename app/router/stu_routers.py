@@ -1,6 +1,5 @@
 from pathlib import Path
 from typing import List, Tuple, Dict
-from pprint import pprint
 from datetime import datetime, timedelta
 
 import aiofiles
@@ -13,6 +12,7 @@ from dataSturct import Time
 from database_op.sqlite3_op import table_get_inList_for_course_stu, get_session, build_table_in_DB, creat_course_table
 from func_set.time_check import generate_deadline, check_time_outline, generate_fileTitle_time, get_last_time
 from response import stu_form_reponses
+from use_model import Mod_User
 from . import routers_
 
 deadline: datetime = ...
@@ -23,17 +23,25 @@ base_file_path: Path = Path(__file__).parent.parent / Path('data_file')
 current_alive_file_path: Path = ...
 stu_data: Dict = ...
 sign_cache: List = []
+face_master: Dict = ...
+mod_user = Mod_User()
 
 
 @routers_.on_event("startup")
 async def database_connect():
     global table_cache
     global stu_data
+    global face_master
     table_cache, stu_table = table_get_inList_for_course_stu()
     session = next(get_session())
-    pprint(table_cache)
-    stu_data = dict(session.query(stu_table).all())
-    pprint(stu_data)
+
+    raw_stu_data: List = session.query(stu_table).all()
+    raw_stu_data.sort(key=lambda x: x[0])
+
+    stu_data = dict(raw_stu_data)
+    face_master = {stu[0]: num for num, stu in enumerate(raw_stu_data, start=1)}
+    print(stu_data)
+    print(face_master)
 
 
 @routers_.get('/get_time', tags=['学生'])
@@ -76,6 +84,8 @@ async def get_stu_data(  # request: requests.Request,
         raise HTTPException(status_code=402, detail="学生姓名错误！")
     if Path(pic.filename).suffix.lower() not in File_Filter:
         raise HTTPException(status_code=403, detail="非图片类型")
+    if not mod_user.recognize(await face.read(), face_master[stu_id]):
+        raise HTTPException(status_code=405, detail="人脸验证失败！")
     async with aiofiles.open(f'{str(current_alive_file_path)}/{stu_name}.jpg',
                              'wb') as f:
         await f.write(await pic.read())
@@ -110,7 +120,7 @@ async def start(time: Time,
                                      hours=time.hours)
         build_table_in_DB(current_alive_table)
         current_alive_file_path = base_file_path / \
-            Path(f'{generate_fileTitle_time()}-{course}')
+                                  Path(f'{generate_fileTitle_time()}-{course}')
         current_alive_file_path.mkdir()
     return {'statue': 200}
 
