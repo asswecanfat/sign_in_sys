@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import List, Tuple, Dict
 from datetime import datetime, timedelta
@@ -39,14 +40,19 @@ async def database_connect():
     raw_stu_data.sort(key=lambda x: x[0])
 
     stu_data = dict(raw_stu_data)
-    face_master = {stu[0]: num for num, stu in enumerate(raw_stu_data, start=1)}
+    face_master = {
+        stu[0]: num for num,
+        stu in enumerate(
+            raw_stu_data,
+            start=1)}
     print(stu_data)
     print(face_master)
 
 
 @routers_.get('/get_time', tags=['学生'])
 async def get_time():
-    sec = get_last_time(deadline) if isinstance(deadline, datetime) else timedelta()
+    sec = get_last_time(deadline) if isinstance(
+        deadline, datetime) else timedelta()
     return {"status_code": 200, "second": sec}
 
 
@@ -54,6 +60,7 @@ async def get_time():
                responses={**stu_form_reponses})
 # @check_time_decorator(deadline=deadline)
 async def get_stu_data(  # request: requests.Request,
+        *,
         stu_name: str = Form(...,
                              regex=r'^[^\x00-\xff]+$',
                              description='学生姓名'),
@@ -61,7 +68,8 @@ async def get_stu_data(  # request: requests.Request,
                            regex=r'^\d{10}$',
                            description='学生学号'),
         pic: UploadFile = File(..., description='注意！是图片类型'),
-        face: UploadFile = File(..., description='需要验证的图片'),
+        # UploadFile = File(..., description='需要验证的图片'),
+        face: bytes = Body(..., description='图片文件转数组后的字节类型'),
         session: Session = Depends(get_session)):
     """
     发送学生的学号姓名表单, 且上传的文件是图片类型！！！
@@ -84,14 +92,15 @@ async def get_stu_data(  # request: requests.Request,
         raise HTTPException(status_code=402, detail="学生姓名错误！")
     if Path(pic.filename).suffix.lower() not in File_Filter:
         raise HTTPException(status_code=403, detail="非图片类型")
-    if not mod_user.recognize(await face.read(), face_master[stu_id]):
+    if not mod_user.recognize(face, face_master[stu_id]):
         raise HTTPException(status_code=405, detail="人脸验证失败！")
     async with aiofiles.open(f'{str(current_alive_file_path)}/{stu_name}.jpg',
                              'wb') as f:
         await f.write(await pic.read())
     session.execute(
         current_alive_table.insert(), {
-            'name': stu_name, 'pic_url': f'http://127.0.0.1:8000/static/{current_alive_file_path.name}/{stu_name}.jpg'})
+            'name': stu_name,
+            'pic_url': f'http://127.0.0.1:8000/static/{current_alive_file_path.name}/{stu_name}.jpg'})
     session.commit()
     sign_cache.append(stu_id)
     return {"status_code": 200, "detail": "签到成功！"}
@@ -110,6 +119,8 @@ async def start(time: Time,
     global deadline
     global current_alive_table
     global current_alive_file_path
+    global sign_cache
+    sign_cache.clear()
     try:
         current_alive_table = creat_course_table(course)
     except InvalidRequestError:
@@ -120,9 +131,9 @@ async def start(time: Time,
                                      hours=time.hours)
         build_table_in_DB(current_alive_table)
         current_alive_file_path = base_file_path / \
-                                  Path(f'{generate_fileTitle_time()}-{course}')
+            Path(f'{generate_fileTitle_time()}-{course}')
         current_alive_file_path.mkdir()
-    return {'statue': 200}
+    return {"status_code": 200}
 
 
 @routers_.post('/stop_signIn', tags=["教师"])
@@ -137,14 +148,18 @@ async def stop_routine():
     #     if table_name == table.name:
     #         return session.query(table).all()
 
-    return {'status': 203}
-
-
-@routers_.post('/face', tags=["学生"])
-async def face_recognize():
-    return {'status': 200}
+    return {"status_code": 203}
 
 
 @routers_.get('/excel_get', tags=["教师"])
 async def creat_excel():
-    return {'status': 200}
+    return {"status_code": 200}
+
+
+@routers_.get('/table_list_get', tags=["教师"])
+async def get_table_list():
+    return {
+        "status_code": 200,
+        "detail": table_cache if isinstance(
+            table_cache,
+            List) else []}

@@ -3,21 +3,21 @@
 ################################################################################
 ## Form generated from reading UI file 'student.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.0.2
+## Created by: Qt User Interface Compiler version 5.15.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import *
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
+from PySide2.QtCore import *
+from PySide2.QtGui import *
+from PySide2.QtWidgets import *
 
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(500, 400)
+        MainWindow.resize(508, 422)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.layoutWidget = QWidget(self.centralwidget)
@@ -93,7 +93,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 500, 22))
+        self.menubar.setGeometry(QRect(0, 0, 508, 26))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
@@ -111,7 +111,7 @@ class Ui_MainWindow(object):
         self.msg.setText(QCoreApplication.translate("MainWindow", u"\u4fe1\u606f\uff1a", None))
         self.stu_name_label.setText(QCoreApplication.translate("MainWindow", u"\u59d3\u540d\uff1a", None))
         self.sign_button.setText(QCoreApplication.translate("MainWindow", u"\u7b7e\u5230", None))
-        self.camera_label.setText(QCoreApplication.translate("MainWindow", u"                           \u6444\u50cf\u5934\u51c6\u5907\u4e2d                             ", None))
+        self.camera_label.setText(QCoreApplication.translate("MainWindow", u"          \u6444\u50cf\u5934\u51c6\u5907\u4e2d       ", None))
         self.file_select_b.setText(QCoreApplication.translate("MainWindow", u"\u56fe\u7247\u9009\u62e9", None))
         self.file_path.setText("")
         self.stu_num_label.setText(QCoreApplication.translate("MainWindow", u"\u5b66\u53f7\uff1a", None))

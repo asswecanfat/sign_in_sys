@@ -4,9 +4,9 @@ import datetime
 
 import cv2
 import numpy as np
-from PySide6.QtCore import QTimer, Signal, QThread
-from PySide6.QtGui import QImage, QPixmap, QCloseEvent
-from PySide6.QtWidgets import QMainWindow, QApplication, QFileDialog
+from PySide2.QtCore import QTimer, Signal, QThread
+from PySide2.QtGui import QImage, QPixmap, QCloseEvent
+from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog
 
 from student import Ui_MainWindow as Stu_UI
 
@@ -20,6 +20,7 @@ class Prepare_Camera_and_Data_Verify(QThread):
     collect_msg = Signal(str)
     start_sign = Signal()
     button_close = Signal(bool)
+    mean_face_data = Signal(np.ndarray)
 
     def __init__(self, parent):
         super(Prepare_Camera_and_Data_Verify, self).__init__()
@@ -61,11 +62,7 @@ class Prepare_Camera_and_Data_Verify(QThread):
             self.collect_msg.emit(f'正在收集第{len(frame_list)}张图片')
             self.msleep(100)
         self.collect_msg.emit('收集完成，处理中。。。')
-        # face_iter = filter(lambda x: isinstance(x, np.ndarray), [self.face_cascade.detectMultiScale(i,
-        # scaleFactor=1.1, minNeighbors=5) for i in frame_list])
-
-        mean_face = self.__load_face(frame_list)
-        cv2.imwrite("out.jpg", mean_face.reshape((100, 100)))
+        self.mean_face_data.emit(self.__load_face(frame_list).reshape((100, 100)))
         self.start_sign.emit()
 
     def __load_face(self, face_list):
@@ -80,7 +77,6 @@ class Prepare_Camera_and_Data_Verify(QThread):
                 pass
             else:
                 face[num, :] = self.__img2vector(gray[y:y + h, x:x + w])
-            # label[num] = num + 1
         return np.mean(face, axis=0)
 
     def __img2vector(self, image):
@@ -112,25 +108,31 @@ class Sign_In(QThread):
         super(Sign_In, self).__init__()
         self.parent = parent
         self.friend = friend
+
         self.friend.start_sign.connect(self.start)
+        self.friend.mean_face_data.connect(self.get_face_data)
+        self.face_data = None
 
     def run(self) -> None:
         try:
             with open(self.parent.pic, 'rb') as f:
-                with open('out.jpg', 'rb') as p:
-                    msg = requests.post("http://127.0.0.1:8000/stu_msg_upload",
-                                        data={'stu_name': (None, self.parent.name_inp.text()),
-                                              'stu_id': (None, self.parent.num_inp.text())},
-                                        files={'pic': f,
-                                               'face': p})
-                    data = dict(msg.json())
-                    if isinstance(new_msg := data['detail'], str):
-                        self.sign_msg.emit(new_msg)
-                    else:
-                        self.sign_msg.emit('数据缺失')
+                msg = requests.post("http://127.0.0.1:8000/stu_msg_upload",
+                                    data={'stu_name': (None, self.parent.name_inp.text()),
+                                          'stu_id': (None, self.parent.num_inp.text()),
+                                          'face': (None, self.face_data)},
+                                    files={'pic': f})
+                data = dict(msg.json())
+                if isinstance(new_msg := data['detail'], str):
+                    self.sign_msg.emit(new_msg)
+                else:
+                    print(new_msg)
+                    self.sign_msg.emit('数据缺失')
             self.button_close.emit(False)
         except requests.exceptions.ConnectionError:
             self.sign_msg.emit('签到未开始！')
+
+    def get_face_data(self, face_data):
+        self.face_data = face_data.tobytes()
 
 
 class Get_Time(QThread):

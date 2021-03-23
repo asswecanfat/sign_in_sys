@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>500</width>
-    <height>400</height>
+    <width>508</width>
+    <height>422</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -77,7 +77,7 @@
         <bool>false</bool>
        </property>
        <property name="text">
-        <string>                           摄像头准备中                             </string>
+        <string>          摄像头准备中       </string>
        </property>
       </widget>
      </item>
@@ -134,8 +134,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>500</width>
-     <height>22</height>
+     <width>508</width>
+     <height>26</height>
     </rect>
    </property>
   </widget>
