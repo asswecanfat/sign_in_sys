@@ -72,6 +72,7 @@ def face_recongize_knn(image) -> str:
     :param image:面部帧
     :return: 预测值
     """
+    print(image)
     train_face, train_label = load_img(10, 4)
     test_face = np.zeros((1, 100 * 100))
     img = cv2.resize(image, (100, 100), )
@@ -80,7 +81,7 @@ def face_recongize_knn(image) -> str:
     test_label = np.zeros(1)
     test_label[0] = 1
     num_test = test_face.shape[0]
-    data_train_new, data_mean, r_num_vector = pca(train_face, 10)
+    data_train_new, data_mean, r_num_vector = pca(train_face, 8)
     temp_face = test_face - np.tile(data_mean, (num_test, 1))
     data_test_new = np.array(temp_face * r_num_vector)  # 得到测试脸在特征向量下的数据,mat change to array
     return knn_com(data_train_new, train_label, data_test_new)

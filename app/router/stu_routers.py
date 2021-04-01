@@ -1,7 +1,7 @@
-import json
 from pathlib import Path
 from typing import List, Tuple, Dict
 from datetime import datetime, timedelta
+from collections import defaultdict
 
 import aiofiles
 from fastapi import Form, UploadFile, File, HTTPException, Depends, Body
@@ -82,14 +82,12 @@ async def get_stu_data(  # request: requests.Request,
     #     raise HTTPException(status_code=403, detail="拒绝访问")
     # print(Path(pic.filename).suffix.lower())
     global sign_cache
+    if stu_data.get(stu_id, 'fake_name') != stu_name:
+        raise HTTPException(status_code=402, detail="学生姓名错误！")
+    if stu_id in sign_cache:
+        raise HTTPException(status_code=400, detail="已签到！")
     if check_time_outline(deadline):
         raise HTTPException(status_code=404, detail="超时！拒绝访问")
-    if stu_name in sign_cache:
-        raise HTTPException(status_code=400, detail="已签到！")
-    if stu_id not in stu_data:
-        raise HTTPException(status_code=401, detail="学号不存在！")
-    if stu_data[stu_id] != stu_name:
-        raise HTTPException(status_code=402, detail="学生姓名错误！")
     if Path(pic.filename).suffix.lower() not in File_Filter:
         raise HTTPException(status_code=403, detail="非图片类型")
     if not mod_user.recognize(face, face_master[stu_id]):
@@ -120,9 +118,11 @@ async def start(time: Time,
     global current_alive_table
     global current_alive_file_path
     global sign_cache
+    global table_cache
     sign_cache.clear()
     try:
         current_alive_table = creat_course_table(course)
+        table_cache.append(current_alive_table)
     except InvalidRequestError:
         raise HTTPException(status_code=403, detail=f"该表-{course}-已创建！")
     else:
@@ -160,6 +160,14 @@ async def creat_excel():
 async def get_table_list():
     return {
         "status_code": 200,
-        "detail": table_cache if isinstance(
-            table_cache,
-            List) else []}
+        "detail": [i.name for i in table_cache]}
+
+
+@routers_.get('/get_table_data', tags=["教师"])
+async def get_table_data(table_index: int, session: Session = Depends(get_session)):
+    raw_table_data = session.query(table_cache[table_index]).all()
+    axis = defaultdict(int)
+    for i in raw_table_data:
+        temp_data = i[3].strftime('%H-%M-%S')
+        axis[temp_data] += 1
+    return {"status_code": 200, "axis": axis}
