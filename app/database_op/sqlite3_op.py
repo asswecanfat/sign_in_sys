@@ -65,6 +65,10 @@ def build_table_in_DB(new_table: Table):
     metadata.create_all(engine, tables=[new_table], checkfirst=True)
 
 
+def delete_table(table: Table):
+    metadata.drop_all(engine, tables=[table], checkfirst=True)
+
+
 def table_get_inList_for_course_stu() -> (List[Table], Table):
     """
     获取数据库中已有表

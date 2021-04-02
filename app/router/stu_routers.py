@@ -10,7 +10,8 @@ from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy import Table
 
 from dataSturct import Time
-from database_op.sqlite3_op import table_get_inList_for_course_stu, get_session, build_table_in_DB, creat_course_table
+from database_op.sqlite3_op import table_get_inList_for_course_stu, \
+    get_session, build_table_in_DB, creat_course_table, delete_table
 from func_set.time_check import generate_deadline, check_time_outline, generate_fileTitle_time, get_last_time
 from response import stu_form_reponses
 from use_model import Mod_User
@@ -121,8 +122,11 @@ async def start(time: Time,
     global table_cache
     sign_cache.clear()
     try:
-        current_alive_table = creat_course_table(course)
-        table_cache.append(current_alive_table)
+        if course:
+            current_alive_table = creat_course_table(course)
+            table_cache.append(current_alive_table)
+        else:
+            raise HTTPException(status_code=404, detail="该表不能为空！")
     except InvalidRequestError:
         raise HTTPException(status_code=403, detail=f"该表-{course}-已创建！")
     else:
@@ -133,7 +137,7 @@ async def start(time: Time,
         current_alive_file_path = base_file_path / \
             Path(f'{generate_fileTitle_time()}-{course}')
         current_alive_file_path.mkdir()
-    return {"status_code": 200}
+    return {"status_code": 200, "detail": "签到开始成功！"}
 
 
 @routers_.post('/stop_signIn', tags=["教师"])
@@ -148,7 +152,7 @@ async def stop_routine():
     #     if table_name == table.name:
     #         return session.query(table).all()
 
-    return {"status_code": 203}
+    return {"status_code": 200, "detail": "签到停止成功！"}
 
 
 @routers_.get('/excel_get', tags=["教师"])
@@ -164,10 +168,24 @@ async def get_table_list():
 
 
 @routers_.get('/get_table_data', tags=["教师"])
-async def get_table_data(table_index: int, session: Session = Depends(get_session)):
+async def get_table_data(table_index: int,
+                         session: Session = Depends(get_session)):
     raw_table_data = session.query(table_cache[table_index]).all()
     axis = defaultdict(int)
     for i in raw_table_data:
         temp_data = i[3].strftime('%H-%M-%S')
         axis[temp_data] += 1
     return {"status_code": 200, "axis": axis}
+
+
+@routers_.post('/delete_table', tags=["教师"])
+async def del_table(table_index: int):
+    table = table_cache[table_index]
+    delete_file_path = base_file_path / Path(str(table_name))
+    if delete_file_path.exists():
+        delete_table(table)
+        for file in delete_file_path.glob('*.*'):
+            file.unlink()
+        delete_file_path.rmdir()
+        return {"status_code": 200, "detail": f"删除{str(table)}成功"}
+    return {"status_code": 404, "detail": f"删除{str(table)}失败"}

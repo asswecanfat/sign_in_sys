@@ -58,7 +58,7 @@ def generate_deadline(seconds: float = 0,
 
 
 def generate_fileTitle_time() -> str:
-    return f'{str(datetime.datetime.now().strftime("%Y-%m-%d-%H-%M"))}'
+    return f'{str(datetime.datetime.now().strftime("%Y-%m-%d %H-%M"))}'
 
 
 def get_last_time(deadline: datetime.datetime) -> datetime.timedelta:
