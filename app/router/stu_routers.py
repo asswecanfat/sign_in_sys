@@ -162,6 +162,9 @@ async def creat_excel():
 
 @routers_.get('/table_list_get', tags=["教师"])
 async def get_table_list():
+    """
+    获取表名单
+    """
     return {
         "status_code": 200,
         "detail": [i.name for i in table_cache]}
@@ -170,6 +173,10 @@ async def get_table_list():
 @routers_.get('/get_table_data', tags=["教师"])
 async def get_table_data(table_index: int,
                          session: Session = Depends(get_session)):
+    """
+    获取选中的表的数据
+    - **table_index**: 选中的表
+    """
     raw_table_data = session.query(table_cache[table_index]).all()
     axis = defaultdict(int)
     for i in raw_table_data:

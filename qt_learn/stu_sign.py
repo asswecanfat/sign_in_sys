@@ -12,6 +12,9 @@ from student import Ui_MainWindow as Stu_UI
 
 
 class ValueNoneException(Exception):
+    """
+    自定义异常
+    """
     pass
 
 

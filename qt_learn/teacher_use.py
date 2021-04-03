@@ -5,12 +5,29 @@ import json
 from typing import DefaultDict
 
 from PySide2 import QtGui
-from PySide2.QtWidgets import QMainWindow, QApplication, QVBoxLayout
-from PySide2.QtCore import QThread, Signal, QTimer, QStringListModel
-from PySide2.QtGui import QColor
+from PySide2.QtWidgets import QMainWindow, QApplication, QVBoxLayout, QMenu, QAction
+from PySide2.QtCore import QThread, Signal, QTimer, QStringListModel, Qt, QPoint
+from PySide2.QtGui import QColor, QCursor
 from PySide2.QtCharts import QtCharts
 
 from teacher import Ui_MainWindow as TMainWindow
+
+
+class Get_Time(QThread):
+    count_start = Signal(int)
+
+    def __init__(self, parent):
+        super(Get_Time, self).__init__()
+        self.setParent(parent)
+
+    def run(self) -> None:
+        try:
+            time = requests.get("http://127.0.0.1:8000/get_time", timeout=1)
+            sec = time.json()
+        except requests.exceptions.ConnectionError:
+            self.count_start.emit(0)
+        else:
+            self.count_start.emit(int(sec['second']))
 
 
 class Table_List_Get(QThread):
@@ -99,6 +116,7 @@ class Start_Sign_IN(QThread):
             "hours": self.hour
         },
             "course": self.course})
+        res = dict()
         try:
             response = requests.post('http://127.0.0.1:8000/start_signIn',
                                      data=data,
@@ -109,11 +127,37 @@ class Start_Sign_IN(QThread):
         else:
             self.sign_msg.emit(res.get('detail', '建表失败'))
         finally:
+            self.sign_pb_disable.emit(res.get('status_code', 100) == 200)
             self.table_list_refresh.emit()
 
     def get_time_data(self, hour, minute, second, course):
         self.hour, self.minute, self.second, self.course = hour, minute, second, course
         self.start()
+
+
+class Delete_Option(QThread):
+    delete_msg = Signal(str)
+
+    def __init__(self, parent):
+        super(Delete_Option, self).__init__()
+        self.setParent(parent)
+        self.table_index = None
+
+    def run(self) -> None:
+        if self.table_index:
+            try:
+                response = requests.post('http://127.0.0.1:8000/delete_table',
+                                         data={"table_index": self.table_index})
+                res = response.json()
+            except requests.exceptions.ConnectionError:
+                pass
+            else:
+                self.delete_msg.emit(res.get('detail', '未知错误'))
+        else:
+            self.delete_msg.emit('未选中表！')
+
+    def get_table_index(self, table_index):
+        self.table_index = table_index
 
 
 class Teacher_OP(QMainWindow, TMainWindow):
@@ -143,6 +187,10 @@ class Teacher_OP(QMainWindow, TMainWindow):
 
         self.stop_sign_thread = Stop_Sign_IN(self)
 
+        self.get_time_thread = Get_Time(self)
+
+        self.delete_table_thread = Delete_Option(self)
+
         # chart
         self.series = QtCharts.QBarSeries(self)
         self.target_bar = QtCharts.QBarSet('学生数量')
@@ -162,7 +210,7 @@ class Teacher_OP(QMainWindow, TMainWindow):
         self.qcv = QtCharts.QChartView(self.chart)
 
         self.init_connect()
-        self.set_stop_pb()
+        self.set_start_dis_and_set_stop_en(False)
 
     def init_connect(self):
         layout = QVBoxLayout()
@@ -176,24 +224,25 @@ class Teacher_OP(QMainWindow, TMainWindow):
             lambda: self.show_msg_label.setText(''))
         self.clear_msg_timer.start(3000)
 
-        self.get_time_timer.timeout.connect(self.get_time)
+        self.get_time_timer.timeout.connect(self.get_time_thread.start)
         self.get_time_timer.start(1500)
 
         self.get_table_list_thread.table_list.connect(
             lambda x: self.list_model.setStringList(x))
         self.get_table_list_thread.start()
 
-        self.start_sign_thread.sign_msg.connect(
-            lambda x: self.show_msg_label.setText(x))
-        self.start_sign_thread.sign_pb_disable.connect(
-            lambda x: self.start_sign_pb.setDisabled(x))
+        self.start_sign_thread.sign_msg.connect(self.set_msg)
+        self.start_sign_thread.sign_pb_disable.connect(lambda x: self.start_sign_pb.setDisabled(x) )
         self.start_sign_thread.table_list_refresh.connect(self.get_table_list_thread.start)
 
-        self.stop_sign_thread.res_msg.connect(
-            lambda x: self.show_msg_label.setText(x))
+        self.stop_sign_thread.res_msg.connect(self.set_msg)
 
         self.get_table_data_thread.axis_x.connect(self.set_axis_x)
         self.get_table_data_thread.axis_y.connect(self.set_axis_y)
+
+        self.get_time_thread.count_start.connect(self.get_time)
+
+        self.delete_table_thread.delete_msg.connect(self.set_msg)
 
         self.start_sign_pb.clicked.connect(
             lambda: self.time_data.emit(
@@ -206,9 +255,17 @@ class Teacher_OP(QMainWindow, TMainWindow):
         self.stop_sign_pb.clicked.connect(self.stop_sign)
 
         self.table_list.clicked.connect(self.get_table_index)
+        self.table_list.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table_list.customContextMenuRequested[QPoint].connect(self.set_menu)
 
-    def set_stop_pb(self):
-        self.stop_sign_pb.setDisabled(self.start_sign_pb.isEnabled())
+    def set_menu(self, _):
+        delete_option = QMenu()
+        delete_option.addAction(QAction("删除", self, triggered=self.delete_table_thread.start))
+        delete_option.exec_(QCursor.pos())
+
+    def set_start_dis_and_set_stop_en(self, is_enable):
+        self.stop_sign_pb.setDisabled(not is_enable)
+        self.start_sign_pb.setDisabled(is_enable)
 
     def set_axis_x(self, date_list):
         self.axis_x.clear()
@@ -220,18 +277,16 @@ class Teacher_OP(QMainWindow, TMainWindow):
         self.target_bar.append(people_num_list)
         self.num = len(people_num_list)
 
+    def set_msg(self, text):
+        self.show_msg_label.setText(text)
+
     def get_table_index(self, index):
         self.table_index.emit(index.row())
 
-    def get_time(self):
-        try:
-            time = requests.get("http://127.0.0.1:8000/get_time", timeout=1)
-            sec = time.json()
-        except requests.exceptions.ConnectionError:
-            self.stop_sign()
-        else:
+    def get_time(self, sec):
+        if sec:
             self.count_timer.start(1000)
-            self.time = int(sec['second'])
+            self.time = sec
             self.get_time_timer.stop()
 
     def stop_sign(self):
@@ -240,11 +295,11 @@ class Teacher_OP(QMainWindow, TMainWindow):
     def time_count(self):
         if self.time:
             self.time -= 1
+            self.set_start_dis_and_set_stop_en(True)
         else:
             self.count_timer.stop()
-            self.start_sign_pb.setDisabled(False)
+            self.set_start_dis_and_set_stop_en(False)
             self.get_time_timer.start(1500)
-        self.set_stop_pb()
         self.show_time_label.setText(
             f'{str(datetime.timedelta(seconds=self.time))}')
 
