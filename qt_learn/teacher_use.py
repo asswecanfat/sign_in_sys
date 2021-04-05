@@ -110,25 +110,29 @@ class Start_Sign_IN(QThread):
 
     def run(self) -> None:
         self.sign_pb_disable.emit(True)
-        data = json.dumps({"time": {
-            "seconds": self.second,
-            "minutes": self.minute,
-            "hours": self.hour
-        },
-            "course": self.course})
-        res = dict()
-        try:
-            response = requests.post('http://127.0.0.1:8000/start_signIn',
-                                     data=data,
-                                     timeout=1)
-            res = response.json()
-        except requests.exceptions.ConnectionError:
-            self.sign_msg.emit('签到开始失败！')
+        if self.second + self.minute + self.hour:
+            data = json.dumps({"time": {
+                "seconds": self.second,
+                "minutes": self.minute,
+                "hours": self.hour
+            },
+                "course": self.course})
+            res = dict()
+            try:
+                response = requests.post('http://127.0.0.1:8000/start_signIn',
+                                         data=data,
+                                         timeout=1)
+                res = response.json()
+            except requests.exceptions.ConnectionError:
+                self.sign_msg.emit('签到开始失败！')
+            else:
+                self.sign_msg.emit(res.get('detail', '建表失败'))
+            finally:
+                self.sign_pb_disable.emit(res.get('status_code', 100) == 200)
+                self.table_list_refresh.emit()
         else:
-            self.sign_msg.emit(res.get('detail', '建表失败'))
-        finally:
-            self.sign_pb_disable.emit(res.get('status_code', 100) == 200)
-            self.table_list_refresh.emit()
+            self.sign_pb_disable.emit(False)
+            self.sign_msg.emit('时间之和不可为0！')
 
     def get_time_data(self, hour, minute, second, course):
         self.hour, self.minute, self.second, self.course = hour, minute, second, course
@@ -142,26 +146,23 @@ class Delete_Option(QThread):
         super(Delete_Option, self).__init__()
         self.setParent(parent)
         self.table_index = None
+        self.parent = parent
 
     def run(self) -> None:
-        if self.table_index:
-            try:
-                response = requests.post('http://127.0.0.1:8000/delete_table',
-                                         data={"table_index": self.table_index})
-                res = response.json()
-            except requests.exceptions.ConnectionError:
-                pass
-            else:
-                self.delete_msg.emit(res.get('detail', '未知错误'))
+        try:
+            response = requests.get('http://127.0.0.1:8000/delete_table',
+                                    params={"table_index": self.parent.table_list.currentIndex().row()})
+            res = response.json()
+        except requests.exceptions.ConnectionError:
+            pass
         else:
-            self.delete_msg.emit('未选中表！')
-
-    def get_table_index(self, table_index):
-        self.table_index = table_index
+            self.delete_msg.emit(res.get('detail', '未知错误'))
+            self.parent.get_table_list_thread.start()
 
 
 class Teacher_OP(QMainWindow, TMainWindow):
     table_index = Signal(int)
+    right_menu_table_index = Signal(int)
     time_data = Signal(int, int, int, str)
 
     def __init__(self):
@@ -232,7 +233,7 @@ class Teacher_OP(QMainWindow, TMainWindow):
         self.get_table_list_thread.start()
 
         self.start_sign_thread.sign_msg.connect(self.set_msg)
-        self.start_sign_thread.sign_pb_disable.connect(lambda x: self.start_sign_pb.setDisabled(x) )
+        self.start_sign_thread.sign_pb_disable.connect(lambda x: self.start_sign_pb.setDisabled(x))
         self.start_sign_thread.table_list_refresh.connect(self.get_table_list_thread.start)
 
         self.stop_sign_thread.res_msg.connect(self.set_msg)
@@ -260,7 +261,7 @@ class Teacher_OP(QMainWindow, TMainWindow):
 
     def set_menu(self, _):
         delete_option = QMenu()
-        delete_option.addAction(QAction("删除", self, triggered=self.delete_table_thread.start))
+        delete_option.addAction(QAction("删除", delete_option, triggered=self.delete_table_thread.start))
         delete_option.exec_(QCursor.pos())
 
     def set_start_dis_and_set_stop_en(self, is_enable):

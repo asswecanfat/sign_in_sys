@@ -8,6 +8,7 @@ import joblib
 from knn_face import get_KNN, KNeighborsClassifier
 
 data_file: List = [i for i in (Path(__file__).parent.parent / Path('data_file/stu_face')).iterdir()]
+model_file_path = Path(__file__).parent.parent / Path('data_file')
 
 
 def load_img(all_img_num: int,
@@ -85,7 +86,8 @@ def start_train():
     使用knn算法进行训练并打包成模型
 
     """
-    train_face, train_label, test_face, test_label = load_img(all_img_num=10, people_num=len(data_file))
+    people_num = len(data_file)
+    train_face, train_label, test_face, test_label = load_img(all_img_num=10, people_num=people_num)
     data_train_new, data_mean, r_num_vector = pca(face_data=train_face, vector_num=10)
     # num_train = data_train_new.shape[0]  # 训练脸总数
     num_test = test_face.shape[0]  # 测试脸总数
@@ -94,9 +96,10 @@ def start_train():
     data_test_new = np.array(data_test_new)  # mat change to array
     data_train_new = np.array(data_train_new)
 
-    knn = get_KNN(people_num=4, face=data_train_new, label=train_label)
+    knn = get_KNN(people_num=people_num, face=data_train_new, label=train_label)
     model_test(knn, data_test_new)
-    joblib.dump((knn, data_mean, r_num_vector), '../data_file/stu_face.model')
+    joblib.dump((knn, data_mean, r_num_vector),
+                str(model_file_path / Path('stu_face.model')))
 
 
 def model_test(model: KNeighborsClassifier, data_test: np.ndarray):

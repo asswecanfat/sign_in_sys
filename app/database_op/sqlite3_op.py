@@ -66,6 +66,12 @@ def build_table_in_DB(new_table: Table):
 
 
 def delete_table(table: Table):
+    """
+    在数据库中删除表
+
+    :param table: 选中的表
+    :return:
+    """
     metadata.drop_all(engine, tables=[table], checkfirst=True)
 
 

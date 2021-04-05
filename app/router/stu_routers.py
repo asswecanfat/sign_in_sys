@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 
 import aiofiles
-from fastapi import Form, UploadFile, File, HTTPException, Depends, Body
+from fastapi import Form, UploadFile, File, HTTPException, Depends, Body, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy import Table
@@ -15,6 +15,7 @@ from database_op.sqlite3_op import table_get_inList_for_course_stu, \
 from func_set.time_check import generate_deadline, check_time_outline, generate_fileTitle_time, get_last_time
 from response import stu_form_reponses
 from use_model import Mod_User
+from train_model import start_train
 from . import routers_
 
 deadline: datetime = ...
@@ -52,6 +53,9 @@ async def database_connect():
 
 @routers_.get('/get_time', tags=['学生'])
 async def get_time():
+    """
+    获取剩余时间
+    """
     sec = get_last_time(deadline) if isinstance(
         deadline, datetime) else timedelta()
     return {"status_code": 200, "second": sec}
@@ -160,6 +164,15 @@ async def creat_excel():
     return {"status_code": 200}
 
 
+@routers_.post('/start_train_model', tags=["教师"])
+async def train_model(background_tasks: BackgroundTasks):
+    """
+    模型训练
+    """
+    background_tasks.add_task(start_train)
+    return {"status_code": 200, "msg": "模型训练已于后台开始！"}
+
+
 @routers_.get('/table_list_get', tags=["教师"])
 async def get_table_list():
     """
@@ -185,14 +198,23 @@ async def get_table_data(table_index: int,
     return {"status_code": 200, "axis": axis}
 
 
-@routers_.post('/delete_table', tags=["教师"])
+@routers_.get('/delete_table', tags=["教师"])
 async def del_table(table_index: int):
-    table = table_cache[table_index]
-    delete_file_path = base_file_path / Path(str(table_name))
-    if delete_file_path.exists():
-        delete_table(table)
-        for file in delete_file_path.glob('*.*'):
-            file.unlink()
-        delete_file_path.rmdir()
-        return {"status_code": 200, "detail": f"删除{str(table)}成功"}
-    return {"status_code": 404, "detail": f"删除{str(table)}失败"}
+    """
+    删除数据库中已有表
+    - **table_index**: 选中的表
+    """
+    try:
+        table = table_cache[table_index]
+    except IndexError:
+        raise HTTPException(status_code=404, detail="无此表！")
+    else:
+        delete_file_path = base_file_path / Path(str(table))
+        if delete_file_path.exists():
+            delete_table(table)
+            for file in delete_file_path.glob('*.*'):
+                file.unlink()
+            delete_file_path.rmdir()
+            table_cache.remove(table)
+            return {"status_code": 200, "detail": f"删除{str(table)}成功"}
+        return {"status_code": 404, "detail": f"删除{str(table)}失败"}
