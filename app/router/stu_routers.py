@@ -159,9 +159,22 @@ async def stop_routine():
     return {"status_code": 200, "detail": "签到停止成功！"}
 
 
-@routers_.get('/excel_get', tags=["教师"])
-async def creat_excel():
-    return {"status_code": 200}
+@routers_.get('/excel_data_get', tags=["教师"])
+async def creat_excel(table_index: int,
+                      session: Session = Depends(get_session)):
+    """
+    获取数据制作excel表
+
+    - **table_index**: 选中的表
+    """
+    try:
+        table = table_cache[table_index]
+    except IndexError:
+        raise HTTPException(status_code=404, detail="无此表！")
+    else:
+        raw_table_data = session.query(table).all()
+        return {"status_code": 200,
+                "excel_data": [i[:3] for i in raw_table_data]}
 
 
 @routers_.post('/start_train_model', tags=["教师"])

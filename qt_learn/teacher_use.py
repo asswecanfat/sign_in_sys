@@ -4,6 +4,7 @@ import requests
 import json
 from typing import DefaultDict
 
+import xlwt
 from PySide2 import QtGui
 from PySide2.QtWidgets import QMainWindow, QApplication, QVBoxLayout, QMenu, QAction
 from PySide2.QtCore import QThread, Signal, QTimer, QStringListModel, Qt, QPoint
@@ -141,11 +142,11 @@ class Start_Sign_IN(QThread):
 
 class Delete_Option(QThread):
     delete_msg = Signal(str)
+    table_list_refresh = Signal()
 
     def __init__(self, parent):
         super(Delete_Option, self).__init__()
         self.setParent(parent)
-        self.table_index = None
         self.parent = parent
 
     def run(self) -> None:
@@ -157,7 +158,64 @@ class Delete_Option(QThread):
             pass
         else:
             self.delete_msg.emit(res.get('detail', '未知错误'))
-            self.parent.get_table_list_thread.start()
+            self.table_list_refresh.emit()
+
+
+class Train_Model(QThread):
+    train_msg = Signal(str)
+
+    def __init__(self, parent):
+        super(Train_Model, self).__init__()
+        self.setParent(parent)
+
+    def run(self) -> None:
+        try:
+            response = requests.post('http://127.0.0.1:8000/start_train_model')
+            res = response.json()
+        except requests.exceptions.ConnectionError:
+            pass
+        else:
+            self.train_msg.emit(res.get('msg', '训练错误！'))
+
+
+class Creat_Excel(QThread):
+    ce_pb_disable = Signal(bool)
+    ce_msg = Signal(str)
+
+    def __init__(self, parent):
+        super(Creat_Excel, self).__init__()
+        self.setParent(parent)
+        self.parent = parent
+
+    def run(self) -> None:
+        self.ce_pb_disable.emit(True)
+        try:
+            response = requests.get('http://127.0.0.1:8000/excel_data_get',
+                                    params={'table_index': self.parent.table_list.currentIndex().row()})
+            res = response.json()
+        except requests.exceptions.ConnectionError:
+            pass
+        else:
+            if data := res.get('excel_data', []):
+                self.ce_msg.emit('excel开始生成！')
+                # 创建一个workbook 设置编码
+                work_book = xlwt.Workbook(encoding='utf-8')
+                # 创建一个worksheet
+                work_sheet = work_book.add_sheet('1')
+                # 写入excel
+                # 参数对应 行, 列, 值
+                work_sheet.write(0, 0, '序号')
+                work_sheet.write(0, 1, '姓名')
+                work_sheet.write(0, 2, '图片url')
+                for row, value_set in enumerate(data, start=1):
+                    for column, value in enumerate(value_set):
+                        work_sheet.write(row, column, value)
+                work_book.save(f'{self.parent.table_list.currentIndex().data()}.xls')
+                self.ce_msg.emit('excel生成成功！')
+            else:
+                self.ce_msg.emit('无数据写入！')
+        finally:
+            self.ce_pb_disable.emit(False)
 
 
 class Teacher_OP(QMainWindow, TMainWindow):
@@ -169,7 +227,7 @@ class Teacher_OP(QMainWindow, TMainWindow):
         super(Teacher_OP, self).__init__()
         self.setupUi(self)
         self.time = 0
-        self.num = 0  # 记录上张表的数量
+        self.num = 0  # 记录上张表的标签数量
 
         self.get_time_timer = QTimer(self)
 
@@ -191,6 +249,10 @@ class Teacher_OP(QMainWindow, TMainWindow):
         self.get_time_thread = Get_Time(self)
 
         self.delete_table_thread = Delete_Option(self)
+
+        self.train_model_thread = Train_Model(self)
+
+        self.creat_excel_thread = Creat_Excel(self)
 
         # chart
         self.series = QtCharts.QBarSeries(self)
@@ -238,12 +300,20 @@ class Teacher_OP(QMainWindow, TMainWindow):
 
         self.stop_sign_thread.res_msg.connect(self.set_msg)
 
+        self.creat_excel_thread.ce_pb_disable.connect(lambda x: self.excel_creat_pb.setDisabled(x))
+        self.creat_excel_thread.ce_msg.connect(self.set_msg)
+
         self.get_table_data_thread.axis_x.connect(self.set_axis_x)
         self.get_table_data_thread.axis_y.connect(self.set_axis_y)
 
         self.get_time_thread.count_start.connect(self.get_time)
 
         self.delete_table_thread.delete_msg.connect(self.set_msg)
+        self.delete_table_thread.table_list_refresh.connect(self.get_table_list_thread.start)
+
+        self.train_model_thread.train_msg.connect(self.set_msg)
+
+        self.train_model_pb.clicked.connect(self.train_model_thread.start)
 
         self.start_sign_pb.clicked.connect(
             lambda: self.time_data.emit(
@@ -254,6 +324,8 @@ class Teacher_OP(QMainWindow, TMainWindow):
 
         self.stop_sign_pb.clicked.connect(self.stop_sign_thread.start)
         self.stop_sign_pb.clicked.connect(self.stop_sign)
+
+        self.excel_creat_pb.clicked.connect(self.creat_excel_thread.start)
 
         self.table_list.clicked.connect(self.get_table_index)
         self.table_list.setContextMenuPolicy(Qt.CustomContextMenu)
